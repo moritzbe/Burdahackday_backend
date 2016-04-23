@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage as nd
 import cv2
+import PIL
 
 
 # load tree image
@@ -18,6 +19,9 @@ basic = im
 # invert image
 im_invert = .9 - im
 
+# get the image shape
+# im = im.mean(2)
+sh = im.shape
 
 #enhance Colors, so e.g. .8red =>1.0red
 def enhanceColors(image, threshold):
@@ -35,18 +39,31 @@ def whiteToBlack(image):
 	return image
 
 
+# select a certain colorchannel
+def selectColorchannel(image, color):
+	if color == "red":
+		return image[:,:,0]
+	if color == "green":
+		return image[:,:,1]
+	if color == "blue":
+		return image[:,:,2]
+	else:
+		return image
+
+# def convertNpToCV(np_image):
+
 
 enhanced_image = enhanceColors(im, .7)
 whiteout = whiteToBlack(enhanced_image)
+red_channel = selectColorchannel(whiteout, "red")
+# x,y,w,h = cv2.boundingRect(red_channel)
+# print x
 
 
 
-# im = im.mean(2)
-sh = im.shape
 
-
-
-plt.imshow(whiteout);plt.title('Red');
+# cv2.imshow("Image", whiteout)
+plt.imshow(red_channel);plt.title('Red');
 # plt.imshow(im,map='gray');plt.title('Basic');
 
 # plt.subplot(2,2,1)
