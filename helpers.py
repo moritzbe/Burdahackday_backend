@@ -50,6 +50,9 @@ def convertNumpyArrayToOpenCVBinary(image):
 	image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 	return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+def convertOpenCvToBw(image):
+	return cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
 def colorToIndex(color):
 	colors = {
 		'red':0,
@@ -61,3 +64,9 @@ def colorToIndex(color):
 def indexToColor(index):
 	colors = ['red','green','blue']
 	return colors[index]
+
+def createBlank(size, rgb=(0, 0, 0)):
+    image = np.zeros((size[0], size[1], 3), np.uint8)
+    color = tuple(reversed(rgb))
+    image[:] = color
+    return convertNumpyArrayToOpenCV(image)

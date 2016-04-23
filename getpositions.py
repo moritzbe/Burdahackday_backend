@@ -40,6 +40,10 @@ def getColor(image, pathArray):
 	maxIndex = meanValues.index(max(meanValues))
 	return indexToColor(maxIndex)
 
+def cleanImage(image):	
+	kernel = np.ones((2,2),np.uint8)
+	return cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
+
 def getPositions(base64String):
 	# Array of image positions in the form:
 	# {
@@ -58,16 +62,12 @@ def getPositions(base64String):
 		image = makeThumbnail(image)
 		divider = config['divider']
 	imageArray = convertToNumpyArray(image)
-	imageArray = enhanceColors(imageArray)
-	imageArray = whiteToBlack(imageArray)
-	#optimized image
 	optimizedImage = imageArray
 	#Creating Binary image
 	openCvImage = convertNumpyArrayToOpenCV(optimizedImage)
-	openCvImageBW = convertNumpyArrayToOpenCVBinary(optimizedImage)
-	kernel = np.ones((2,2),np.uint8)
-	openCvImageBW = cv2.morphologyEx(openCvImageBW, cv2.MORPH_OPEN, kernel)
-	ret,thresh = cv2.threshold(openCvImageBW,0,255,0)
+	openCvImageBW = convertNumpyArrayToOpenCVBinary(openCvImage)	
+	
+	ret,thresh = cv2.threshold(openCvImageBW,127,255,0)
 	contours, hierarchy = cv2.findContours(thresh,cv2.THRESH_BINARY,cv2.CHAIN_APPROX_SIMPLE)
 	for contour in contours:
 		if len(contour)>20:
@@ -76,4 +76,15 @@ def getPositions(base64String):
 			box = [pointA, pointB]
 			color = getColor(openCvImage,contour)
 			results['red'].append(box)
+	
 	return results
+
+
+
+with open('image2.json') as dataFile:
+	data = json.load(dataFile)
+getPositions(data['src'])
+
+k = cv2.waitKey(0)
+if k == 27:
+	cv2.destroyAllWindows()

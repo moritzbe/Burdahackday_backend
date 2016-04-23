@@ -35,9 +35,11 @@ openCvImage = convertNumpyArrayToOpenCV(convertToNumpyArray(createImageFromBase6
 images = []
 for color in positions:
 	for position in positions[color]:
-		w = position[0][1] - position[1][1]
-		h = position[0][0] - position[1][0]
-		images.append([openCvImage[position[0][0]:position[0][1], h:w],color])
+		y1 = position[0][1]
+		y2 = position[1][1]
+		x1 = position[0][0]
+		x2 = position[1][0]
+		images.append([openCvImage[y1:y2, x1:x2],color])
 
 plt.figure()
 i = 1
