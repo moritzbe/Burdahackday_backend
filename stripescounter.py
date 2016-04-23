@@ -4,15 +4,31 @@
 
 
 #import librarys
+import json
+import re
+import base64
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.ndimage as nd
 import cv2
 import PIL
 
+from io import BytesIO
+from PIL import Image
 
+
+#Load dummy-json-file
+with open('image.json') as dataFile:
+  data = json.load(dataFile)
+
+#get base64 string of image
+base64ImageString = re.sub('^data:image/.+;base64,', '', data['src']).decode('base64')
+image = Image.open(BytesIO(base64ImageString))
+image.thumbnail((image.size[0]/5,image.size[1]/5,), Image.ANTIALIAS)
+
+im = np.array(image.getdata()).reshape(image.size[1], image.size[0], 3)
+	
 # load tree image
-im = plt.imread('paper.jpg')/255.
+im = im/255.
 basic = im
 # if jpg, divide by 255 (8bits)!
 
@@ -59,7 +75,27 @@ red_channel = selectColorchannel(whiteout, "red")
 # x,y,w,h = cv2.boundingRect(red_channel)
 # print x
 
+optimizedImage = red_channel
+optimizedImage = np.uint8(optimizedImage*255)
 
+openCvImage = cv2.cvtColor(optimizedImage, cv2.COLOR_RGB2BGR)
+openCvImage.itemset((10,10,2),0)
+cv2.imshow('image',openCvImage)
+
+
+k = cv2.waitKey(0)
+if k == 27:         # wait for ESC key to exit
+   cv2.destroyAllWindows()
+
+
+
+
+
+# imgray = cv2.cvtColor(red_channel, cv2.COLOR_BGR2RGB)
+# ret,thresh = cv2.threshold(imgray,.5,1,0)
+# im2, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+
+# print hierarchy
 
 
 # cv2.imshow("Image", whiteout)
