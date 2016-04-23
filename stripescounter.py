@@ -4,14 +4,30 @@
 
 
 #import librarys
+import json
+import re
+import base64
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.ndimage as nd
 import cv2
 
+from io import BytesIO
+from PIL import Image
 
+
+#Load dummy-json-file
+with open('image.json') as dataFile:
+  data = json.load(dataFile)
+
+#get base64 string of image
+base64ImageString = re.sub('^data:image/.+;base64,', '', data['src']).decode('base64')
+image = Image.open(BytesIO(base64ImageString))
+image.thumbnail((image.size[0]/5,image.size[1]/5,), Image.ANTIALIAS)
+
+im = np.array(image.getdata()).reshape(image.size[1], image.size[0], 3)
+	
 # load tree image
-im = plt.imread('paper.jpg')/255.
+im = im/255.
 basic = im
 # if jpg, divide by 255 (8bits)!
 
