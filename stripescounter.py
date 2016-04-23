@@ -54,24 +54,6 @@ enhanced_image = enhanceColors(im, .7)
 whiteout = whiteToBlack(enhanced_image)
 
 
-
-# im = im.mean(2)
-sh = im.shape
-
-
-
-plt.imshow(whiteout);plt.title('Red');
-# plt.imshow(im,map='gray');plt.title('Basic');
-
-# plt.subplot(2,2,1)
-# plt.imshow(im_red, cmap='gray');plt.title('Red');
-# plt.subplot(2,2,2)
-# plt.imshow(im_green, cmap='gray');plt.title('Green');
-# plt.subplot(2,2,3)
-# plt.imshow(im_blue, cmap='gray');plt.title('Blue');
-# plt.subplot(2,2,4)
-# plt.imshow(filtered, cmap='gray');plt.title('filtered_red');
-
 #optimized image
 optimizedImage = whiteout
 optimizedImage = np.uint8(optimizedImage*255)
@@ -83,24 +65,17 @@ for i in range(5):
 	openCvImage = cv2.erode(openCvImage,kernel,iterations = 1)
 	openCvImage = cv2.dilate(openCvImage,kernel,iterations = 1)
 
-
-# contours, _ = cv2.findContours(openCvImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+openCvImageBW = cv2.cvtColor(openCvImage, cv2.COLOR_BGR2GRAY);
+contours, _ = cv2.findContours(openCvImageBW, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 # for c in contours:
 # 	rect = cv2.boundingRect(c)
 # 	if rect[2] < 5 or rect[3] < 5: continue
-# 	print cv2.contourArea(c)
+# 	#print cv2.contourArea(c)
+detector = cv2.SimpleBlobDetector()
+print detector.detect(openCvImageBW)
 #Show image
 cv2.imshow('image',openCvImage)
 
 k = cv2.waitKey(0)
 if k == 27:         # wait for ESC key to exit
     cv2.destroyAllWindows()
-
-#contours, _ = cv2.findContours(openCvImage, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-#for c in contours:
-#    rect = cv2.boundingRect(c)
-#    if rect[2] < 5 or rect[3] < 5: continue
-#    print cv2.contourArea(c)
-
-
-#plt.show()
