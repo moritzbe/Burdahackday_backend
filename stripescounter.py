@@ -14,29 +14,49 @@ import cv2
 from io import BytesIO
 from PIL import Image
 
+debug = 0
 
-#Load dummy-json-file
-with open('image.json') as dataFile:
-  data = json.load(dataFile)
-#get base64 string of image
-base64ImageString = re.sub('^data:image/.+;base64,', '', data['src']).decode('base64')
-image = Image.open(BytesIO(base64ImageString))
-image.thumbnail((image.size[0]/5,image.size[1]/5,), Image.ANTIALIAS)
-im = np.array(image.getdata()).reshape(image.size[1], image.size[0], 3)
-	
-# load tree image
-im = im/255.
-basic = im
-# if jpg, divide by 255 (8bits)!
+config = {
+	'divider': 5,
+	'threshold': .7
+}
 
-# invert image
-im_invert = .9 - im
+#Helpers to find max of list of list of list
+def findMax(lists,index):
+	pivot = 0
+	for item in lists:
+		if item[0][index] > pivot:
+			pivot=item[0][index]
+	return pivot
+def findMin(lists,index):
+	pivot = 0
+	for item in lists:
+		if pivot == 0:
+			pivot=item[0][index]
+		if item[0][index] < pivot:
+			pivot=item[0][index]
+	return pivot
 
+# Load image from json
+def createImageFromBase64(base64String):
+	#get base64 string of image, remove meta-data if there
+	base64ImageString = re.sub('^data:image/.+;base64,', '', base64String).decode('base64')
+	return Image.open(BytesIO(base64ImageString))
+
+# Makes Thumbnail
+# divider:Number the number the image-size is divided by
+def makeThumbnail(image):
+	image.thumbnail((image.size[0]/config['divider'],image.size[1]/config['divider'],), Image.ANTIALIAS)
+	return image
+
+# Converts the image to a Numpy array
+def convertToNumpyArray(image):
+	return np.array(image.getdata()).reshape(image.size[1], image.size[0], 3)/255.
 
 #enhance Colors, so e.g. .8red =>1.0red
-def enhanceColors(image, threshold):
-	image[image > threshold] = 1
-	image[image <= threshold] = 0
+def enhanceColors(image):
+	image[image > config['threshold']] = 1
+	image[image <= config['threshold']] = 0
 	return image
 
 #make all white pixels to black pisels
@@ -45,37 +65,68 @@ def whiteToBlack(image):
 		for j in xrange(image.shape[1]):
 			if image[i,j,0] == image[i,j,1] == image[i,j,2] == 1:
 				image[i,j] = 0
-
 	return image
 
+def convertNumpyArrayToOpenCV(image):
+	return cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+def convertNumpyArrayToOpenCVBinary(image):
+	image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+	return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
-enhanced_image = enhanceColors(im, .7)
-whiteout = whiteToBlack(enhanced_image)
 
 
-#optimized image
-optimizedImage = whiteout
-optimizedImage = np.uint8(optimizedImage*255)
+def getPositionOfColor(base64String, color):
+	# Array of image positions in the form:
+	# [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]]
+	results = []
+	image = createImageFromBase64(base64String)
+	image = makeThumbnail(image)
+	imageArray = convertToNumpyArray(image)
+	imageArray = enhanceColors(imageArray)
+	imageArray = whiteToBlack(imageArray)
+	#optimized image
+	optimizedImage = imageArray
+	optimizedImage = np.uint8(optimizedImage*255)
+	#Creating Binary image
+	openCvImageBW = convertNumpyArrayToOpenCVBinary(optimizedImage)
+	kernel = np.ones((2,2),np.uint8)
+	openCvImageBW = cv2.morphologyEx(openCvImageBW, cv2.MORPH_OPEN, kernel)
+	ret,thresh = cv2.threshold(openCvImageBW,0,255,0)
+	contours, hierarchy = cv2.findContours(thresh,cv2.THRESH_BINARY,cv2.CHAIN_APPROX_SIMPLE)
+	for contour in contours:
+		if len(contour)>20:
+			box = [[findMin(contour,0), findMin(contour,1)], [findMax(contour,0), findMax(contour,1)]]
+			results.append(box)
 
-openCvImage = cv2.cvtColor(optimizedImage, cv2.COLOR_RGB2BGR)
+	#Paint rectangles
+	for result in results:
+		cv2.rectangle(openCvImageBW, (result[0][0], result[0][1]), (result[1][0], result[1][1]), (255,0,0), 2)
+	#Show image
+	if(debug==1):
+		cv2.imshow('image',openCvImageBW)
+	return results
 
-kernel = np.ones((2,2),np.uint8)
-for i in range(5):
-	openCvImage = cv2.erode(openCvImage,kernel,iterations = 1)
-	openCvImage = cv2.dilate(openCvImage,kernel,iterations = 1)
 
-openCvImageBW = cv2.cvtColor(openCvImage, cv2.COLOR_BGR2GRAY);
-contours, _ = cv2.findContours(openCvImageBW, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-# for c in contours:
-# 	rect = cv2.boundingRect(c)
-# 	if rect[2] < 5 or rect[3] < 5: continue
-# 	#print cv2.contourArea(c)
-detector = cv2.SimpleBlobDetector()
-print detector.detect(openCvImageBW)
-#Show image
-cv2.imshow('image',openCvImage)
+# Array of image positions in the form:
+# {
+#	"red": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]],
+#	"green": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]],
+#	"blue": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]]
+# }
+def getPositions(base64String):
+	results = {}
+	for color in ['red','green','blue']:
+		results[color] = getPositionOfColor(data['src'], color)
+	return results
 
-k = cv2.waitKey(0)
-if k == 27:         # wait for ESC key to exit
-    cv2.destroyAllWindows()
+
+if(debug==1):
+	#Load dummy-json-file
+	with open('image.json') as dataFile:
+		data = json.load(dataFile)
+	print getPositions(data['src'])
+	k = cv2.waitKey(0)
+	if k == 27:
+		cv2.destroyAllWindows()
