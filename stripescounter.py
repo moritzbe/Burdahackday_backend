@@ -74,6 +74,25 @@ def convertNumpyArrayToOpenCVBinary(image):
 	image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 	return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+def colorToIndex(color):
+	colors = {
+		'red': 0,
+		'green': 1,
+		'blue': 2
+	}
+	return colors[color]
+
+
+
+# Removes every color exept the color defined in color
+def removeColors(image,color):
+	image[:,:,1] = 0
+	image[1,:,:] = 0
+	cv2.imshow('image',convertNumpyArrayToOpenCV(image))
+	return image
+
+
+
 
 
 
@@ -89,6 +108,7 @@ def getPositionOfColor(base64String, color):
 	#optimized image
 	optimizedImage = imageArray
 	optimizedImage = np.uint8(optimizedImage*255)
+	optimizedImage = removeColors(optimizedImage,color)
 	#Creating Binary image
 	openCvImageBW = convertNumpyArrayToOpenCVBinary(optimizedImage)
 	kernel = np.ones((2,2),np.uint8)
