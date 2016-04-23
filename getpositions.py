@@ -33,20 +33,37 @@ def whiteToBlack(image):
 				image[i,j] = 0
 	return image
 
+def getColor(image, pathArray):
+	mask = np.zeros(image.shape[:2], np.uint8)
+	cv2.drawContours(mask, pathArray, -1, 255, -1)
+	meanValues = cv2.mean(image,mask = mask)
+	maxIndex = meanValues.index(max(meanValues))
+	return indexToColor(maxIndex)
 
-def getPositionOfColor(base64String, color):
+def getPositions(base64String):
 	# Array of image positions in the form:
-	# [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]]
-	results = []
+	# {
+	#	"red": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]],
+	#	"green": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]],
+	#	"blue": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]]
+	# }
+	results = {
+		'red': [],
+		'green': [],
+		'blue': []
+	}
 	image = createImageFromBase64(base64String)
-	image = makeThumbnail(image)
+	divider = 1
+	if image.size[0]>1000 and image.size[1]>1000:
+		image = makeThumbnail(image)
+		divider = config['divider']
 	imageArray = convertToNumpyArray(image)
 	imageArray = enhanceColors(imageArray)
 	imageArray = whiteToBlack(imageArray)
 	#optimized image
 	optimizedImage = imageArray
-	optimizedImage = np.uint8(optimizedImage*255)
 	#Creating Binary image
+	openCvImage = convertNumpyArrayToOpenCV(optimizedImage)
 	openCvImageBW = convertNumpyArrayToOpenCVBinary(optimizedImage)
 	kernel = np.ones((2,2),np.uint8)
 	openCvImageBW = cv2.morphologyEx(openCvImageBW, cv2.MORPH_OPEN, kernel)
@@ -54,32 +71,9 @@ def getPositionOfColor(base64String, color):
 	contours, hierarchy = cv2.findContours(thresh,cv2.THRESH_BINARY,cv2.CHAIN_APPROX_SIMPLE)
 	for contour in contours:
 		if len(contour)>20:
-			box = [[findMin(contour,0)*config['divider'], findMin(contour,1)*config['divider']], [findMax(contour,0)*config['divider'], findMax(contour,1)*config['divider']]]
-			results.append(box)
-
-	#Paint rectangles
-	for result in results:
-		cv2.rectangle(openCvImageBW, (result[0][0], result[0][1]), (result[1][0], result[1][1]), (255,0,0), 2)
+			pointA = [findMin(contour,0)*divider, findMin(contour,1)*divider]
+			pointB = [findMax(contour,0)*divider, findMax(contour,1)*divider]
+			box = [pointA, pointB]
+			color = getColor(openCvImage,contour)
+			results['red'].append(box)
 	return results
-
-
-# Array of image positions in the form:
-# {
-#	"red": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]],
-#	"green": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]],
-#	"blue": [[[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]], [[x1,y1],[x2,y2]]]
-# }
-def getPositions(base64String):
-	results = {}
-	for color in ['red','green','blue']:
-		results[color] = getPositionOfColor(base64String, color)
-	return results
-
-# if(debug==1):
-# 	#Load dummy-json-file
-# 	with open('image.json') as dataFile:
-# 		data = json.load(dataFile)
-# 	print getPositions(data['src'])
-# 	k = cv2.waitKey(0)
-# 	if k == 27:
-# 		cv2.destroyAllWindows()

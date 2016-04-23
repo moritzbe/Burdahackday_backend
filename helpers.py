@@ -42,8 +42,22 @@ def convertToNumpyArray(image):
 	return np.array(image.getdata()).reshape(image.size[1], image.size[0], 3)/255.
 
 def convertNumpyArrayToOpenCV(image):
+	image = np.uint8(image*255)
 	return cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
 def convertNumpyArrayToOpenCVBinary(image):
+	image = np.uint8(image*255)
 	image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 	return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+def colorToIndex(color):
+	colors = {
+		'red':0,
+		'green':1,
+		'blue': 2
+	}
+	return colors[color]
+
+def indexToColor(index):
+	colors = ['red','green','blue']
+	return colors[index]
